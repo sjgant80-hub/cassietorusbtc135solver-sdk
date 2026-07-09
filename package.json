@@ -1,0 +1,24 @@
+{
+  "name": "@ai-native-solutions/cassietorusbtc135solver-sdk",
+  "version": "1.0.0",
+  "description": "cassietorusbtc135solver SDK · sovereign single-file library extracted from cassietorusbtc135solver/index.html",
+  "type": "module",
+  "main": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": ["src", "docs", "README.md", "LICENSE"],
+  "scripts": {
+    "test": "node --test test/",
+    "smoke": "node examples/smoke.js"
+  },
+  "keywords": ["cassietorusbtc135solver", "sdk", "sovereign", "ai-native-solutions"],
+  "author": "AI-Native Solutions",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sjgant80-hub/cassietorusbtc135solver-sdk.git"
+  },
+  "homepage": "https://sjgant80-hub.github.io/cassietorusbtc135solver-sdk/",
+  "publishConfig": {
+    "access": "public"
+  }
+}

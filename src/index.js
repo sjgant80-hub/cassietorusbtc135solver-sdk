@@ -1,0 +1,1424 @@
+// cassietorusbtc135solver SDK · sovereign single-file library · MIT · AI-Native Solutions
+// Extracted from cassietorusbtc135solver/index.html · 79198 bytes of source logic
+// Public-safe: no primes/glyphs/dyad references
+
+(function fallmeshShim(){
+  // Identity — each tool defines these. Defaults safe.
+    id: (document.title || 'node').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,16) || 'node',
+    name: document.title || 'Node',
+    prime: 131
+  };
+  var meshChannel = null;
+  function meshPost(type, data){
+    if (!meshChannel) return;
+    try {
+      meshChannel.postMessage(Object.assign(
+        { type: type, from: NODE.id, prime: NODE.prime, name: NODE.name, t: Date.now() },
+        data || {}
+      ));
+    } catch(e){}
+  }
+  if (typeof BroadcastChannel === 'undefined') return;
+  try { meshChannel = new BroadcastChannel('fallmesh'); } catch(e){ return; }
+    post: meshPost,
+    emit: function(data){ meshPost(NODE.id + ':event', data); },
+    request: function(type, payload){ meshPost('request:' + type, { payload: payload }); },
+    on: function(type, handler){
+      var prev = meshChannel.onmessage;
+      meshChannel.onmessage = function(e){
+        if (prev) try { prev(e); } catch(_){}
+        var m = e.data;
+        if (m && m.type === type && m.from !== NODE.id) handler(m);
+      };
+    }
+  };
+  meshChannel.onmessage = function(e){
+    var m = e.data;
+    if (!m || m.from === NODE.id) return;
+    if (m.type === 'mesh:ping') {
+      meshPost('mesh:pong', {
+        url: location.origin + location.pathname,
+        title: NODE.name
+      });
+    }
+  };
+  meshPost('node:online', {
+    url: location.origin + location.pathname,
+    layers: 7
+  });
+    NODE.name + ' · prime ' + NODE.prime + ' · mesh online'); } catch(_){}
+})();
+(function bloomShim(){
+  var PRIMES = [2n, 3n, 5n, 7n, 11n, 13n, 17n];
+  var RING_KEYS = ['R0','R1','R2','R3','R4','R5','R6'];
+  var RING_LABELS = ['ground','sensor','gate','affect','executive','identity','observer'];
+  var RING_COLORS = ['#660044','#00AAFF','#FFAA00','#FF4444','#44AA44','#AA44FF','#FFFFFF'];
+  var RING_WORDS = {
+    R0: ['help','fix','broken','down','deploy','server','build','run','start','stop','crash','restart','install','hardware','resource','gpu','cpu','torus','walker','kangaroo','solver','signal'],
+    R1: ['find','search','look','check','monitor','scan','watch','detect','alert','log','track','measure','notice','see','hear','observe','sense','pulse','probe','listen','heartbeat'],
+    R2: ['filter','block','allow','route','gate','triage','review','approve','reject','sort','prioritize','threshold','permission','consent','accept','validate','verify','consensus','vote'],
+    R3: ['feel','want','need','wish','hope','worry','love','hate','urgent','important','care','afraid','excited','angry','sad','heart','warmth','tone','resonance','consonance','dissonance'],
+    R4: ['plan','schedule','create','design','architect','organize','manage','build','draft','compose','write','structure','assign','orchestrate','dispatch','execute','swarm','deploy','workflow'],
+    R5: ['who','identity','role','config','team','culture','policy','value','name','profile','purpose','mission','represent','bloom','signature','tag','handle','self','kappa'],
+    R6: ['why','meta','review','reflect','pattern','observe','meaning','understand','analyze','systemic','philosophical','oracle','watcher','witness','field','katapayadi','recursion']
+  };
+  function decompose(text) {
+    if (!text || typeof text !== 'string') {
+      return { bloom: [0,0,0,0,0,0,0], product: 1n, normalized: [0,0,0,0,0,0,0], dominantRing: -1, dominantLabel: 'silence' };
+    }
+    var lower = text.toLowerCase();
+    var tokens = lower.split(/\s+/).filter(Boolean);
+    var counts = [0,0,0,0,0,0,0];
+    for (var r = 0; r < 7; r++) {
+      var words = RING_WORDS[RING_KEYS[r]];
+      for (var i = 0; i < words.length; i++) {
+        var entry = words[i];
+        if (entry.indexOf(' ') !== -1) {
+          if (lower.indexOf(entry) !== -1) counts[r]++;
+        } else {
+          for (var j = 0; j < tokens.length; j++) if (tokens[j] === entry) counts[r]++;
+        }
+      }
+    }
+    var product = 1n;
+    for (var k = 0; k < 7; k++) for (var n = 0; n < counts[k]; n++) product *= PRIMES[k];
+    var max = Math.max.apply(null, counts);
+    var normalized = max === 0 ? [0,0,0,0,0,0,0] : counts.map(function(c){return c / max;});
+    var maxIdx = 0;
+    for (var m = 1; m < 7; m++) if (counts[m] > counts[maxIdx]) maxIdx = m;
+    var dominantLabel = counts[maxIdx] === 0 ? 'silence' : RING_LABELS[maxIdx];
+    return { bloom: counts, product: product, normalized: normalized, dominantRing: counts[maxIdx] === 0 ? -1 : maxIdx, dominantLabel: dominantLabel };
+  }
+  function isBalanced(b) { var t = b.reduce(function(s,v){return s+v;},0); return t === 0 || b.every(function(v){return v/t <= 0.6;}); }
+  function isSpiked(b)   { var t = b.reduce(function(s,v){return s+v;},0); return t > 0 && b.some(function(v){return v/t > 0.7;}); }
+  function dominantRing(b) { var i = 0; for (var k = 1; k < b.length; k++) if (b[k] > b[i]) i = k; return b[i] === 0 ? -1 : i; }
+  function needsSearch(b, text) {
+    var t = b.reduce(function(s,v){return s+v;},0);
+    if (t === 0) return false;
+    var norm = b[1] / Math.max.apply(null, b);
+    return norm > 0.3 && /search|find|look up|what is|who is|latest|news|current/i.test(text);
+  }
+  function signature(text) {
+    var r = decompose(text);
+    return r.bloom.map(function(c,i){return 'R'+i+':'+c;}).join('|') + ' · Π=' + r.product.toString();
+  }
+  // ── MCP routing ───────────────────────────────────────────
+  var MCP_RULES = [
+    { idx:4, threshold:0.3, pattern:/linear|issue|ticket|task|bug|feature/i,    server:{type:'url',url:'https://mcp.linear.app/sse',name:'linear-mcp'} },
+    { idx:3, threshold:0.3, pattern:/email|mail|send|inbox/i,                  server:{type:'url',url:'https://gmail.mcp.claude.com/mcp',name:'gmail-mcp'} },
+    { idx:4, threshold:0.3, pattern:/calendar|schedule|meeting|event/i,         server:{type:'url',url:'https://gcal.mcp.claude.com/mcp',name:'gcal-mcp'} },
+    { idx:2, threshold:0.3, pattern:/jira|confluence|atlassian/i,               server:{type:'url',url:'https://mcp.atlassian.com/v1/sse',name:'atlassian-mcp'} },
+    { idx:0, threshold:0.3, pattern:/deploy|cloudflare|worker|pages/i,           server:{type:'url',url:'https://github.com/cloudflare/mcp-server-cloudflare',name:'cloudflare-mcp'} },
+    { idx:3, threshold:0.3, pattern:/intercom|customer|support/i,               server:{type:'url',url:'https://mcp.intercom.com/sse',name:'intercom-mcp'} },
+    { idx:0, threshold:0.3, pattern:/fallcore|proxy|on.?prem|sovereign/i,        server:{type:'local',url:'http://localhost:5510',name:'fallcore-mcp'} },
+    { idx:4, threshold:0.3, pattern:/reason|think|chain|prove|onlybrains/i,     server:{type:'url',url:'https://onlybrains.onrender.com/mcp',name:'onlybrains-mcp'} }
+  ];
+  function pickMCP(norm, text) {
+    var out = []; var seen = {};
+    if (!norm || !text) return out;
+    for (var i = 0; i < MCP_RULES.length; i++) {
+      var rule = MCP_RULES[i];
+      if (norm[rule.idx] > rule.threshold && rule.pattern.test(text) && !seen[rule.server.name]) {
+        out.push(rule.server);
+        seen[rule.server.name] = true;
+      }
+    }
+    return out;
+  }
+  // Expose
+    _v: 1,
+    decompose: decompose,
+    isBalanced: isBalanced,
+    isSpiked: isSpiked,
+    dominantRing: dominantRing,
+    needsSearch: needsSearch,
+    signature: signature,
+    pickMCP: pickMCP,
+    RING_KEYS: RING_KEYS,
+    RING_LABELS: RING_LABELS,
+    RING_COLORS: RING_COLORS,
+    PRIMES: [2,3,5,7,11,13,17]
+  };
+  // KCC ledger emission: tag every entry with its bloom signature
+  // Hook into existing kcc shim if present
+  setTimeout(function(){
+        try {
+          if (action && typeof action === 'string') {
+            var sig = decompose(action);
+            meta = meta || {};
+            meta.bloom = sig.bloom;
+            meta.dominantRing = sig.dominantRing;
+          }
+        } catch(_){}
+        return origEmit(action, ring, weight, meta);
+      };
+    }
+  }, 500);
+})();
+(function konomiShim(){
+  // NODE is defined by host tool's mesh shim. If missing, fail gracefully.
+    pubkey_b64: 'bQWcb/SgeWVIEa0H+YYGhzohMfo9zcDysqZEvzYtXTw=',
+    tier: 'dead',
+    features: [],
+    payload: null,
+    expires_at: null
+  };
+  function b64Bytes(b64){ var bin=atob(b64); var b=new Uint8Array(bin.length); for(var i=0;i<bin.length;i++) b[i]=bin.charCodeAt(i); return b; }
+  function canonJSON(o){
+    if (o===null||typeof o!=='object') return JSON.stringify(o);
+    if (Array.isArray(o)) return '['+o.map(canonJSON).join(',')+']';
+    var k=Object.keys(o).sort();
+    return '{'+k.map(function(x){return JSON.stringify(x)+':'+canonJSON(o[x]);}).join(',')+'}';
+  }
+  async function verifyLicence(env){
+    if (!env) return { ok:false, error:'no envelope' };
+    try {
+      var raw = atob(env);
+      var parsed = JSON.parse(raw);
+      var payload = parsed.payload, sig = parsed.sig;
+      if (payload.tool_id && payload.tool_id !== NODE.id) {
+        return { ok:false, error:'licence for ' + payload.tool_id + ', not ' + NODE.id };
+      }
+      if (payload.expires && new Date(payload.expires) < new Date()) {
+        return { ok:false, error:'expired ' + payload.expires };
+      }
+      var pubRaw = b64Bytes(KONOMI.pubkey_b64);
+      var key = await crypto.subtle.importKey('raw', pubRaw, { name:'Ed25519' }, false, ['verify']);
+      var sigBytes = b64Bytes(sig);
+      var msg = new TextEncoder().encode(canonJSON(payload));
+      var ok = await crypto.subtle.verify({ name:'Ed25519' }, key, sigBytes, msg);
+      if (!ok) return { ok:false, error:'signature invalid' };
+      return { ok:true, payload:payload };
+    } catch (e) { return { ok:false, error:e.message }; }
+  }
+  async function activateLicence(env){
+    var v = await verifyLicence(env);
+    if (!v.ok) {
+      try { localStorage.setItem('konomi_last_error', v.error); } catch(_){}
+      return v;
+    }
+    try { localStorage.setItem('konomi_licence_' + NODE.id, env); } catch(_){}
+    KONOMI.tier = v.payload.tier;
+    KONOMI.features = v.payload.features || [];
+    KONOMI.payload = v.payload;
+    KONOMI.expires_at = v.payload.expires;
+    updateBadge();
+    return v;
+  }
+  function hasFeature(f){ return KONOMI.features.indexOf(f) >= 0; }
+  function isDead(){ return KONOMI.tier === 'dead'; }
+  function updateBadge(){
+    if (!el) return;
+    var t = KONOMI.tier;
+    var c = t==='dead'?'#8a8a8a':t==='trial'?'#c2a060':'#3a9a72';
+    el.style.color = c;
+  }
+  function injectBadge(){
+    var el = document.createElement('div');
+    el.id = 'konomi-badge';
+    el.style.cssText = 'position:fixed;bottom:12px;left:12px;background:rgba(0,0,0,.65);color:#8a8a8a;padding:5px 10px;border-radius:6px;font-family:monospace;font-size:11px;cursor:pointer;z-index:9999;letter-spacing:.06em;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px)';
+    el.onclick = function(){ showLicenceDialog(); };
+    document.body.appendChild(el);
+  }
+  function showLicenceDialog(){
+    var current = KONOMI.payload ? JSON.stringify(KONOMI.payload, null, 2) : '(DEAD mode — no licence active)';
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui,sans-serif';
+    document.body.appendChild(modal);
+    modal.querySelector('#kn-close').onclick = function(){ modal.remove(); };
+    modal.querySelector('#kn-activate').onclick = async function(){
+      var paste = modal.querySelector('#kn-paste').value.trim();
+      if (!paste) { modal.querySelector('#kn-msg').textContent = 'paste an envelope first'; return; }
+      var v = await activateLicence(paste);
+      if (v.ok) { modal.querySelector('#kn-msg').style.color='#3a9a72'; modal.querySelector('#kn-msg').textContent='✓ '+v.payload.tier+' activated'; setTimeout(function(){ modal.remove(); }, 1200); }
+      else { modal.querySelector('#kn-msg').textContent = 'rejected: ' + v.error; }
+    };
+    modal.onclick = function(e){ if (e.target===modal) modal.remove(); };
+  }
+    verifyLicence: verifyLicence,
+    activateLicence: activateLicence,
+    hasFeature: hasFeature,
+    isDead: isDead,
+    showDialog: showLicenceDialog
+  };
+  // Boot: try saved licence
+  (async function(){
+    if (document.readyState === 'loading') {
+    }
+    injectBadge();
+    var saved = null;
+    try { saved = localStorage.getItem('konomi_licence_' + NODE.id); } catch(_){}
+    if (saved) {
+      var v = await verifyLicence(saved);
+      if (v.ok) {
+        KONOMI.tier = v.payload.tier;
+        KONOMI.features = v.payload.features || [];
+        KONOMI.payload = v.payload;
+        KONOMI.expires_at = v.payload.expires;
+        updateBadge();
+        return;
+      }
+    }
+  })();
+})();
+(function kccShim(){
+  var ONLYBRAINS_API = 'https://onlybrains.onrender.com';
+  // ── ring map · canonical (anatomy + earning verbs) ──
+  var RINGS = [
+    { i:0, v:'R0', anat:'ground',  verb:'compute', hz:'7.83',  colour:'#B42838' },
+    { i:1, v:'R1', anat:'signal',  verb:'signal',  hz:'15.66', colour:'#008CC8' },
+    { i:2, v:'R2', anat:'gate',    verb:'filter',  hz:'23.49', colour:'#DCA030' },
+    { i:3, v:'R3', anat:'heart',   verb:'care',    hz:'31.32', colour:'#28B450' },
+    { i:4, v:'R4', anat:'voice',   verb:'build',   hz:'39.15', colour:'#5078DC' },
+    { i:5, v:'R5', anat:'mirror',  verb:'verify',  hz:'46.98', colour:'#8C50C8' },
+    { i:6, v:'R6', anat:'watcher', verb:'govern',  hz:'54.81', colour:'#787878' }
+  ];
+  function getKccKey(){
+    try {
+      var k = localStorage.getItem('kcc-key');
+      if (!k) {
+        k = 'kcc-' + Array.from(crypto.getRandomValues(new Uint8Array(4)))
+          .map(function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+        localStorage.setItem('kcc-key', k);
+      }
+      return k;
+    } catch(_){ return 'kcc-anon'; }
+  }
+  var KEY = getKccKey();
+  var LEDGER = { events:[], head:null, last_export:null, ob_balance:null, ob_last_sync:null, anchors:[] };
+  try {
+    var raw = localStorage.getItem(KCC_KEY);
+    if (raw) LEDGER = Object.assign(LEDGER, JSON.parse(raw));
+  } catch(_){}
+  function persist(){ try { localStorage.setItem(KCC_KEY, JSON.stringify(LEDGER)); } catch(_){} }
+  function canon(o){
+    if (o===null||typeof o!=='object') return JSON.stringify(o);
+    if (Array.isArray(o)) return '['+o.map(canon).join(',')+']';
+    var k=Object.keys(o).sort();
+    return '{'+k.map(function(x){return JSON.stringify(x)+':'+canon(o[x]);}).join(',')+'}';
+  }
+  function fnv1a(str){
+    var h = 2166136261 >>> 0;
+    for (var i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = (h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24))) >>> 0; }
+    return ('00000000'+h.toString(16)).slice(-8);
+  }
+  function emit(action, ringId, weight, meta){
+    var ring = typeof ringId === 'number' ? ringId : (RINGS.findIndex(function(r){ return r.verb===ringId || r.anat===ringId || r.v===ringId; }));
+    if (ring < 0 || ring > 6) ring = 0;
+    var ev = {
+      v: 1,
+      action: String(action || 'event'),
+      ring: ring,
+      weight: typeof weight === 'number' ? weight : 1,
+      t: Date.now(),
+      prev: LEDGER.head || null,
+      meta: meta || null
+    };
+    ev.h = fnv1a(canon(ev) + (LEDGER.head || ''));
+    LEDGER.events.push(ev);
+    LEDGER.head = ev.h;
+    persist();
+        try { ch.postMessage({ source: NODE.id, type:'kcc:event', from:NODE.id, prime:NODE.prime, ts:Date.now(), ev:ev }); } catch(_){}
+      });
+    }
+    updateBadge();
+    return ev;
+  }
+  function bloom(){
+    var b = [0,0,0,0,0,0,0];
+    LEDGER.events.forEach(function(ev){ b[ev.ring] = (b[ev.ring] || 0) + (ev.weight || 1); });
+    return b;
+  }
+  function shape(){
+    var b = bloom();
+    var sum = b.reduce(function(a,x){ return a+x; }, 0);
+    var peak = b.indexOf(Math.max.apply(null, b));
+    var name = sum === 0 ? 'unbloomed' : RINGS[peak].verb;
+    return { vec:b, sum:sum, peak:peak, peakRing:RINGS[peak], shape:name };
+  }
+  function exportProof(opts){
+    opts = opts || {};
+    var payload = {
+      v: 1, tool: NODE.id, tool_prime: NODE.prime, tool_name: NODE.name,
+      issued: new Date().toISOString(),
+      event_count: LEDGER.events.length, head: LEDGER.head,
+      bloom: bloom(), shape: shape(), kcc_key: KEY,
+      onlybrains_balance: LEDGER.ob_balance,
+      anchors_count: (LEDGER.anchors || []).length
+    };
+    if (opts.includeEvents) payload.events = LEDGER.events;
+    if (opts.includeAnchors) payload.anchors = LEDGER.anchors;
+    LEDGER.last_export = Date.now();
+    persist();
+    return payload;
+  }
+  // ── OnlyBrains REST client ────────────────────
+  function _withTimeout(promise, ms) {
+    var ctrl = new AbortController();
+    var t = setTimeout(function(){ ctrl.abort(); }, ms || 8000);
+    return { ctrl: ctrl, done: function(){ clearTimeout(t); } };
+  }
+  function _get(path, ms) {
+    var x = _withTimeout(null, ms);
+    return fetch(ONLYBRAINS_API + path + (path.indexOf('?')>=0?'&':'?') + 'key=' + encodeURIComponent(KEY), { signal: x.ctrl.signal })
+      .then(function(r){ x.done(); return r.json(); })
+      .catch(function(e){ x.done(); return { error: e.name === 'AbortError' ? 'timeout' : (e.message || 'fetch failed') }; });
+  }
+  function _post(path, body, ms) {
+    var x = _withTimeout(null, ms);
+    return fetch(ONLYBRAINS_API + path + (path.indexOf('?')>=0?'&':'?') + 'key=' + encodeURIComponent(KEY), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(Object.assign({ key: KEY }, body || {})),
+      signal: x.ctrl.signal
+    }).then(function(r){ x.done(); return r.json(); })
+      .catch(function(e){ x.done(); return { error: e.name === 'AbortError' ? 'timeout' : (e.message || 'fetch failed') }; });
+  }
+  // Wallet sync · fire-and-forget · short timeout
+  function syncOnlyBrains(){
+    return _get('/api/wallet', 4500).then(function(w){
+      if (w && typeof w.balance !== 'undefined') {
+        LEDGER.ob_balance = { balance: w.balance, mined: w.mined, calls: w.calls };
+        LEDGER.ob_last_sync = Date.now();
+        persist();
+        updateBadge();
+      }
+      return w;
+    });
+  }
+  // 7-strategy structured reasoning · 10 $KONO each
+  function reason(problem, strategy) {
+    if (!problem) return Promise.resolve({ error: 'problem required' });
+    var p = _post('/api/reason', { problem: problem, strategy: strategy || 'CoT' }, 45000);
+    emit('ob:reason:' + (strategy || 'CoT'), 5, 1.5, { problem: String(problem).slice(0, 80) });
+    return p.then(function(r){
+      if (r && !r.error) {
+        LEDGER.anchors = LEDGER.anchors || [];
+        LEDGER.anchors.push({ kind:'reason', strategy: strategy || 'CoT', at: Date.now(), result: r });
+        if (LEDGER.anchors.length > 50) LEDGER.anchors = LEDGER.anchors.slice(-50);
+        persist();
+        // refresh wallet to reflect new cost
+        setTimeout(syncOnlyBrains, 800);
+      }
+      return r;
+    });
+  }
+  // Generic BSV chain anchor via /api/fn/exec
+  function anchor(type, params) {
+    if (!type) return Promise.resolve({ error: 'type required' });
+    var p = _post('/api/fn/exec', { type: String(type).toUpperCase(), params: params || {} }, 30000);
+    var ring = type === 'STATE' || type === 'TRADE' ? 6 : type === 'ALARM' ? 2 : type === 'KPI' ? 5 : 4;
+    emit('ob:anchor:' + String(type).toLowerCase(), ring, 2, { type: type });
+    return p.then(function(r){
+      if (r && !r.error) {
+        LEDGER.anchors = LEDGER.anchors || [];
+        LEDGER.anchors.push({ kind:'anchor', type: type, at: Date.now(), params: params, result: r });
+        if (LEDGER.anchors.length > 50) LEDGER.anchors = LEDGER.anchors.slice(-50);
+        persist();
+        setTimeout(syncOnlyBrains, 800);
+      }
+      return r;
+    });
+  }
+  // Convenience: price oracle snapshot · 5 $KONO
+  function oracle(opts) {
+    var defaults = { BTC: true, BSV: true, ETH: true, SOL: true };
+    return anchor('ORACLE', Object.assign(defaults, opts || {}));
+  }
+  // Convenience: mint a 4D tesseract NFT · 100 $KONO
+  function mintNft(id, mime, hash, meta) {
+    return anchor('NFT', {
+      id: id || ('nft-' + NODE.id + '-' + Date.now()),
+      mime: mime || 'application/json',
+      hash: hash || fnv1a(canon(meta || {})),
+      meta: meta || ('Forged by ' + NODE.name + ' · prime ' + NODE.prime)
+    });
+  }
+  // Quote / swap / rates / tiers / chain / fnList / queryTags
+  function quote(model, tokens, asset) {
+    return _get('/api/xchg/quote?model=' + encodeURIComponent(model || 'anthropic') + '&tokens=' + (tokens || 1000) + '&asset=' + (asset || 'reason'), 8000);
+  }
+  function swap(model, tokens, asset) {
+    return _post('/api/xchg/swap', { model: model || 'anthropic', tokens: tokens || 1000, asset: asset || 'reason' }, 12000)
+      .then(function(r){ if (r && !r.error) setTimeout(syncOnlyBrains, 800); return r; });
+  }
+  function rates() { return _get('/api/xchg/rates', 8000); }
+  function tiers() { return _get('/api/tiers', 8000); }
+  function chain() { return _get('/api/chain', 8000); }
+  function fnList() { return _get('/api/fn/list', 8000); }
+  function wallet() { return _get('/api/wallet', 8000); }
+  function queryTags(q) { return _get('/api/tags' + (q ? '?q=' + encodeURIComponent(q) : ''), 10000); }
+  // ── Floating badge ───────────────────────────
+  var bloomBadge = null;
+  function injectBadge(){
+    var el = document.createElement('div');
+    el.id = 'kcc-badge';
+    el.style.cssText = 'position:fixed;bottom:12px;left:120px;background:rgba(0,0,0,.65);color:#dbe1ea;padding:5px 10px;border-radius:6px;font-family:monospace;font-size:11px;cursor:pointer;z-index:9999;letter-spacing:.06em;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px';
+    el.title = 'KCC ledger · OnlyBrains-linked';
+    el.onclick = function(){ showLedger(); };
+    document.body.appendChild(el);
+    bloomBadge = el;
+    updateBadge();
+  }
+  function updateBadge(){
+    if (!bloomBadge) return;
+    var b = bloom();
+    var sum = b.reduce(function(a,x){ return a+x; }, 0);
+    var sparks = b.map(function(v, i){
+      var sz = Math.min(11, 2 + Math.round(v/2));
+      return '<span style="display:inline-block;width:3px;height:'+sz+'px;background:'+RINGS[i].colour+';margin:0 1px;border-radius:1px;vertical-align:middle"></span>';
+    }).join('');
+    var ob = (LEDGER.ob_balance && LEDGER.ob_balance.balance !== undefined)
+      ? ' · <span style="color:#d4af37">$KONO ' + LEDGER.ob_balance.balance + '</span>'
+      : '';
+    bloomBadge.innerHTML = '<span style="opacity:.7">KCC</span> '+sparks+' <span style="opacity:.85">'+sum+'</span>'+ob;
+  }
+  // ── Ledger modal with OnlyBrains actions ────
+  function showLedger(){
+    var b = bloom();
+    var sh = shape();
+    var rows = RINGS.map(function(r, i){
+      var v = b[i];
+      var pct = sh.sum ? Math.round(v/sh.sum*100) : 0;
+      return '<tr><td style="color:'+r.colour+';padding:4px 0;font-weight:600">'+r.v+'</td><td>'+r.anat+'</td><td style="color:#8a8a8a">'+r.verb+'</td><td>'+r.hz+' Hz</td><td style="text-align:right;font-weight:700">'+v+'</td><td style="color:#8a8a8a">'+pct+'%</td></tr>';
+    }).join('');
+    var recent = LEDGER.events.slice(-6).reverse().map(function(ev){
+      var d = new Date(ev.t).toLocaleString();
+      return '<div style="font-size:11px;color:#a8b0bc;padding:2px 0">'+d+' · <span style="color:'+RINGS[ev.ring].colour+';font-weight:600">'+RINGS[ev.ring].v+'</span> · '+ev.action+(ev.weight!==1?' ×'+ev.weight:'')+'</div>';
+    }).join('') || '<div style="color:#8a8a8a;font-size:12px;padding:6px 0">no events yet</div>';
+    var anchorsHtml = (LEDGER.anchors || []).slice(-5).reverse().map(function(a){
+      var d = new Date(a.at).toLocaleString();
+      var label = a.kind === 'reason' ? ('reason · ' + a.strategy) : (a.kind + ' · ' + a.type);
+      return '<div style="font-size:10px;color:#a8b0bc;padding:2px 0"><span style="color:#d4af37">'+d+'</span> · '+label+'</div>';
+    }).join('') || '<div style="color:#8a8a8a;font-size:11px;padding:4px 0">no OnlyBrains calls yet</div>';
+    var bal = LEDGER.ob_balance ? LEDGER.ob_balance.balance : '—';
+    var obSection = '<div style="background:#0c0e12;border:1px solid #2a2f3a;border-radius:8px;padding:10px;margin:10px 0;font-size:12px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div><div style="color:#d4af37;font-weight:700">$KONO ' + bal + '</div><div style="color:#8a8a8a;font-size:10px">key <code>'+KEY+'</code></div></div><button id="kcc-sync" style="background:transparent;color:#d4af37;border:1px solid #d4af37;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:11px">sync</button></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px"><button data-act="reason"  style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="10 $KONO">🧠 reason</button><button data-act="oracle"  style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="5 $KONO">🔮 oracle</button><button data-act="anchor"  style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="varies">⚓ anchor</button><button data-act="nft"     style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="100 $KONO">🎴 mint NFT</button><button data-act="rates"   style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="free">📊 rates</button><button data-act="quote"   style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="free">💱 quote</button><button data-act="chain"   style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="free">⛓️ chain</button><button data-act="tags"    style="background:#1f2937;color:#dbe1ea;border:1px solid #374151;padding:7px 4px;border-radius:6px;cursor:pointer;font-size:11px" title="1 $KONO">🏷️ tags</button></div><div id="kcc-ob-result" style="margin-top:8px;font-size:10px;color:#8a8a8a;max-height:120px;overflow:auto;font-family:monospace;display:none;background:#06080c;border:1px solid #1f2937;border-radius:4px;padding:6px"></div></div>';
+    var modal = document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui,sans-serif';
+    document.body.appendChild(modal);
+    var resultEl = modal.querySelector('#kcc-ob-result');
+    function showResult(label, data){
+      resultEl.style.display = 'block';
+      var s = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+      if (s.length > 4000) s = s.slice(0, 4000) + '\n…';
+      resultEl.textContent = '> ' + label + '\n' + s;
+    }
+    modal.querySelector('#kcc-close').onclick = function(){ modal.remove(); };
+    modal.querySelector('#kcc-sync').onclick = function(){
+      showResult('syncing wallet…', '');
+      syncOnlyBrains().then(function(w){ showResult('wallet', w); modal.remove(); showLedger(); });
+    };
+    modal.querySelector('#kcc-export').onclick = function(){
+      var p = exportProof({ includeEvents:true, includeAnchors:true });
+      var blob = new Blob([JSON.stringify(p, null, 2)], { type:'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a'); a.href = url; a.download = NODE.id + '-kcc-proof-' + Date.now() + '.json'; a.click();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    };
+    modal.querySelectorAll('button[data-act]').forEach(function(btn){
+      btn.onclick = function(){
+        var act = btn.getAttribute('data-act');
+        if (act === 'reason') {
+          var problem = prompt('What problem? (10 $KONO)');
+          if (!problem) return;
+          var strat = prompt('Strategy? (CoT / ToT / GoT / BoT / SelfAsk / ReAct / Reflexion)', 'CoT');
+          showResult('reason: ' + strat, 'thinking…');
+          reason(problem, strat).then(function(r){ showResult('reason · ' + strat, r); });
+        } else if (act === 'oracle') {
+          showResult('oracle (5 $KONO)', 'fetching…');
+          oracle().then(function(r){ showResult('oracle', r); });
+        } else if (act === 'anchor') {
+          var type = prompt('Anchor type? (STATE / KPI / ALARM / TRADE / ASSET / SVG)', 'STATE');
+          if (!type) return;
+          var paramsStr = prompt('Params JSON (e.g. {"equip":"X","from":"idle","to":"run","mode":"auto"})', '{}');
+          var params; try { params = JSON.parse(paramsStr || '{}'); } catch(e){ alert('invalid JSON'); return; }
+          showResult('anchor · ' + type, 'anchoring to BSV…');
+          anchor(type, params).then(function(r){ showResult('anchor · ' + type, r); });
+        } else if (act === 'nft') {
+          var meta = prompt('NFT meta (100 $KONO)', NODE.name + ' · prime ' + NODE.prime);
+          if (!meta) return;
+          showResult('mint NFT', 'minting…');
+          mintNft(null, null, null, meta).then(function(r){ showResult('NFT minted', r); });
+        } else if (act === 'rates') {
+          showResult('rates', 'fetching…');
+          rates().then(function(r){ showResult('rates', r); });
+        } else if (act === 'quote') {
+          showResult('quote · anthropic 10k → reason', 'fetching…');
+          quote('anthropic', 10000, 'reason').then(function(r){ showResult('quote', r); });
+        } else if (act === 'chain') {
+          showResult('chain', 'fetching…');
+          chain().then(function(r){ showResult('chain', r); });
+        } else if (act === 'tags') {
+          showResult('tags', 'fetching…');
+          queryTags().then(function(r){ showResult('tags', r); });
+        }
+      };
+    });
+    modal.onclick = function(e){ if (e.target===modal) modal.remove(); };
+  }
+  // ── 4-channel mesh interop ──
+  var CHANNEL_NAMES = ['fall-kcc', 'kcc-mesh', 'onlybrains-mesh', 'ass-os-mesh'];
+  CHANNEL_NAMES.forEach(function(name){
+    try {
+      var ch = new BroadcastChannel(name);
+      ch.onmessage = function(e){
+        var m = e.data;
+        if (!m || m.from === NODE.id || m.source === NODE.id) return;
+          emit('observed:' + (m.from || m.source || 'peer'), 1, 0.1, { ev_h: m.ev && m.ev.h, channel: name });
+        }
+      };
+    } catch(_){}
+  });
+  // ── Quarterly bloom report (formal cognitive contribution statement) ──
+  function exportBloomReport(opts){
+    opts = opts || {};
+    var quarterStart = opts.since || (function(){
+      var d = new Date(); var q = Math.floor(d.getMonth() / 3);
+      return new Date(d.getFullYear(), q * 3, 1).getTime();
+    })();
+    var quarterEnd = opts.until || Date.now();
+    var qEvents = LEDGER.events.filter(function(e){ return e.t >= quarterStart && e.t <= quarterEnd; });
+    var qBloom = [0,0,0,0,0,0,0];
+    var topActions = {};
+    var anchoredCount = 0;
+    qEvents.forEach(function(ev){
+      qBloom[ev.ring] = (qBloom[ev.ring] || 0) + (ev.weight || 1);
+      topActions[ev.action] = (topActions[ev.action] || 0) + (ev.weight || 1);
+    });
+    (LEDGER.anchors || []).forEach(function(a){ if (a.at >= quarterStart && a.at <= quarterEnd) anchoredCount++; });
+    var totalEvents = qEvents.length;
+    var totalContribution = qBloom.reduce(function(a,x){ return a+x; }, 0);
+    var peakIdx = qBloom.indexOf(Math.max.apply(null, qBloom));
+    var shapeName = totalContribution === 0 ? 'unbloomed' : RINGS[peakIdx].verb;
+    var primesProduct = (function(){
+      var primes = [2,3,5,7,11,13,17];
+      var prod = 1n;
+      for (var i = 0; i < 7; i++) for (var j = 0; j < Math.floor(qBloom[i]); j++) prod *= BigInt(primes[i]);
+      return prod.toString();
+    })();
+    var startDate = new Date(quarterStart).toISOString().slice(0,10);
+    var endDate = new Date(quarterEnd).toISOString().slice(0,10);
+    var topList = Object.entries(topActions).sort(function(a,b){ return b[1]-a[1]; }).slice(0, 10);
+    var format = opts.format || 'markdown';
+    if (format === 'json') {
+      var payload = {
+        v: 1, type: 'bloom_quarterly_report',
+        tool: NODE.id, tool_name: NODE.name, tool_prime: NODE.prime,
+        period: { from: startDate, to: endDate, ms: quarterEnd - quarterStart },
+        bloom_vec: qBloom, bloom_sum: totalContribution, bloom_shape: shapeName,
+        peak_ring: RINGS[peakIdx],
+        prime_product: primesProduct,
+        events_total: totalEvents,
+        anchors_total: anchoredCount,
+        top_actions: topList,
+        kcc_key: KEY,
+        onlybrains_balance: LEDGER.ob_balance,
+        issued_at: new Date().toISOString()
+      };
+      return payload;
+    }
+    // Markdown report
+    var lines = [];
+    lines.push('');
+    lines.push('**Tool:** ' + NODE.name + ' · prime ' + NODE.prime + ' · `' + NODE.id + '`');
+    lines.push('**Period:** ' + startDate + ' → ' + endDate);
+    lines.push('**Issued:** ' + new Date().toISOString());
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('## Headline');
+    lines.push('');
+    lines.push('- **Total events:** ' + totalEvents);
+    lines.push('- **Contribution weight:** ' + totalContribution);
+    lines.push('- **Bloom shape:** ' + shapeName + ' (peak in ' + RINGS[peakIdx].v + ' · ' + RINGS[peakIdx].anat + ')');
+    lines.push('- **BSV anchors this period:** ' + anchoredCount);
+    if (LEDGER.ob_balance) {
+      lines.push('- **$KONO balance:** ' + LEDGER.ob_balance.balance);
+    }
+    lines.push('');
+    lines.push('## Bloom signature');
+    lines.push('');
+    lines.push('```');
+    lines.push('Ring   Anatomy   Earning verb   Count   %');
+    lines.push('────   ───────   ────────────   ─────   ────');
+    RINGS.forEach(function(r, i){
+      var n = qBloom[i];
+      var pct = totalContribution > 0 ? (n / totalContribution * 100).toFixed(1) + '%' : '—';
+      lines.push(r.v + '    ' + r.anat.padEnd(9) + r.verb.padEnd(14) + ' ' + String(n).padStart(5) + '   ' + pct);
+    });
+    lines.push('```');
+    lines.push('');
+    lines.push('## Bloom prime-product (identity)');
+    lines.push('');
+    lines.push('`' + primesProduct + '`');
+    lines.push('');
+    lines.push('_This integer is your tool\'s unique cognitive contribution signature for the period._');
+    lines.push('');
+    lines.push('## Top 10 actions');
+    lines.push('');
+    topList.forEach(function(t){ lines.push('- `' + t[0] + '` × ' + t[1]); });
+    lines.push('');
+    lines.push('## Verification');
+    lines.push('');
+    lines.push('- KCC key: `' + KEY + '`');
+    lines.push('- Ledger head: `' + (LEDGER.head || '∅') + '`');
+    lines.push('- Anchors written to BSV: ' + anchoredCount);
+    lines.push('');
+    lines.push('---');
+    lines.push('');
+    lines.push('_Generated by KCC shim v3 · Ω(KCC) v18 · part of the Fall* estate._');
+    return lines.join('\n');
+  }
+  // ── public API ────────────────────────────────
+    emit: emit, bloom: bloom, shape: shape, exportProof: exportProof, rings: RINGS,
+    ledger: function(){ return { events: LEDGER.events.slice(), head: LEDGER.head, anchors: (LEDGER.anchors||[]).slice() }; },
+    clear: function(){ if (confirm('Clear KCC ledger for ' + NODE.id + '? Cannot undo.')) { LEDGER = { events:[], head:null, last_export:null, ob_balance:null, ob_last_sync:null, anchors:[] }; persist(); updateBadge(); } },
+    showLedger: showLedger,
+    kccKey: function(){ return KEY; },
+    onlybrains: function(){ return LEDGER.ob_balance; },
+    exportBloomReport: exportBloomReport,
+    // OnlyBrains REST client
+    syncOnlyBrains: syncOnlyBrains,
+    reason: reason, anchor: anchor, oracle: oracle, mintNft: mintNft,
+    queryTags: queryTags, quote: quote, swap: swap,
+    rates: rates, tiers: tiers, chain: chain, fnList: fnList, wallet: wallet
+  };
+  // ── boot ──────────────────────────────────────
+  (async function(){
+    if (document.readyState === 'loading') {
+    }
+    injectBadge();
+    var todayKey = 'kcc_open_' + new Date().toISOString().slice(0,10);
+    if (!sessionStorage.getItem(todayKey)) { sessionStorage.setItem(todayKey, '1'); emit('app:open', 0, 1); }
+    var lastSync = LEDGER.ob_last_sync || 0;
+    if (Date.now() - lastSync > 3600 * 1000) syncOnlyBrains();
+      NODE.name + ' · ' + LEDGER.events.length + ' events · shape: ' + shape().shape + ' · key: ' + KEY); } catch(_){}
+  })();
+})();
+(function llmCascade(){
+  var STORE_KEY = 'llm_cascade_v1';
+  var STATE = {
+    keys: {},                  // { anthropic: 'sk-ant-...', openai: '...', google: '...' }
+    webllm: { status: 'not-loaded', model: null, progress: 0, message: '' },
+    // T1 FallCore (local proxy) → T1 user keys → T3 OnlyBrains → T4 WebLLM → T2 mesh → T0 fallback
+    preferred: ['fallcore', 'anthropic', 'openai', 'google', 'onlybrains', 'webllm', 'mesh', 't0'],
+    fallcore_endpoint: '',   // e.g. 'http://localhost:11434' or 'https://ai.acme.internal'
+    log: []                    // last 50 calls: { t, provider, tier, ms, ok, prompt_chars }
+  };
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    if (raw) STATE = Object.assign(STATE, JSON.parse(raw));
+  } catch(_){}
+  function persist(){ try { localStorage.setItem(STORE_KEY, JSON.stringify(STATE)); } catch(_){} }
+  function trace(provider, tier, ms, ok, prompt) {
+    STATE.log.unshift({ t: Date.now(), provider: provider, tier: tier, ms: ms, ok: !!ok, prompt_chars: (prompt || '').length });
+    if (STATE.log.length > 50) STATE.log.length = 50;
+    persist();
+      // R5 verify when AI returns useful output; R0 compute on every call
+    }
+  }
+  function withTimeout(promise, ms, label) {
+    return Promise.race([
+      promise,
+      new Promise(function(_, rej){ setTimeout(function(){ rej(new Error((label||'op') + ' timeout')); }, ms || 30000); })
+    ]);
+  }
+  // ── T1 providers — direct from browser (CORS-allowed endpoints) ──
+  var T1 = {
+    // FallCore: company's on-prem brain · same API shape as Anthropic
+    // If configured, this tries FIRST · transparent fallthrough if low confidence
+    fallcore: {
+      tier: 'T1',
+      label: 'FallCore (on-prem)',
+      available: function(){ return !!STATE.fallcore_endpoint; },
+      hasKey: function(){ return !!STATE.fallcore_endpoint; },
+      ask: async function(prompt, opts){
+        if (!STATE.fallcore_endpoint) throw new Error('no fallcore endpoint');
+        var url = STATE.fallcore_endpoint.replace(/\/$/, '') + '/v1/messages';
+        var r = await withTimeout(fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': STATE.keys.anthropic || 'fallcore-cascade',
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: opts.model || 'claude-sonnet-4-20250514',  // FallCore picks local first regardless
+            max_tokens: opts.max_tokens || 2048,
+            messages: [{ role: 'user', content: prompt }],
+            fallcore_options: opts.fallcore_options || {}
+          })
+        }), 60000, 'fallcore');
+        if (!r.ok) throw new Error('fallcore ' + r.status);
+        var j = await r.json();
+        return j.content[0].text;
+      }
+    },
+    anthropic: {
+      tier: 'T1',
+      label: 'Anthropic',
+      hasKey: function(){ return !!STATE.keys.anthropic; },
+      ask: async function(prompt, opts){
+        if (!STATE.keys.anthropic) throw new Error('no anthropic key');
+        var r = await withTimeout(fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': STATE.keys.anthropic,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: opts.model || 'claude-sonnet-4-20250514',
+            max_tokens: opts.max_tokens || 2048,
+            messages: [{ role: 'user', content: prompt }]
+          })
+        }), 45000, 'anthropic');
+        if (!r.ok) throw new Error('anthropic ' + r.status);
+        var j = await r.json();
+        return j.content[0].text;
+      }
+    },
+    openai: {
+      tier: 'T1',
+      label: 'OpenAI',
+      hasKey: function(){ return !!STATE.keys.openai; },
+      ask: async function(prompt, opts){
+        if (!STATE.keys.openai) throw new Error('no openai key');
+        var r = await withTimeout(fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + STATE.keys.openai },
+          body: JSON.stringify({
+            model: opts.model || 'gpt-4o-mini',
+            max_tokens: opts.max_tokens || 2048,
+            messages: [
+              { role: 'system', content: opts.system || 'You are a helpful assistant. Reply concisely.' },
+              { role: 'user', content: prompt }
+            ]
+          })
+        }), 45000, 'openai');
+        if (!r.ok) throw new Error('openai ' + r.status);
+        var j = await r.json();
+        return j.choices[0].message.content;
+      }
+    },
+    google: {
+      tier: 'T1',
+      label: 'Google',
+      hasKey: function(){ return !!STATE.keys.google; },
+      ask: async function(prompt, opts){
+        if (!STATE.keys.google) throw new Error('no google key');
+        var model = opts.model || 'gemini-2.0-flash';
+        var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + model + ':generateContent?key=' + encodeURIComponent(STATE.keys.google);
+        var r = await withTimeout(fetch(url, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role:'user', parts: [{ text: (opts.system ? opts.system + '\n\n' : '') + prompt }] }],
+            generationConfig: { maxOutputTokens: opts.max_tokens || 2048 }
+          })
+        }), 45000, 'google');
+        if (!r.ok) throw new Error('google ' + r.status);
+        var j = await r.json();
+        return j.candidates[0].content.parts[0].text;
+      }
+    }
+  };
+  // ── T2 mesh peer (ask another tab) ──
+  var T2 = {
+    mesh: {
+      tier: 'T2',
+      label: 'Mesh peer',
+      ask: function(prompt, opts){
+        return new Promise(function(resolve, reject){
+          var ch;
+          try { ch = new BroadcastChannel('fallmesh'); }
+          catch(e){ return reject(new Error('mesh open failed')); }
+          var reqId = 'llmreq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+          var handler = function(e){
+            var m = e.data;
+            if (m && m.type === 'llm:response' && m.req === reqId) {
+              ch.removeEventListener('message', handler);
+              ch.close();
+              if (m.text) resolve(m.text);
+              else reject(new Error(m.error || 'mesh empty'));
+            }
+          };
+          ch.addEventListener('message', handler);
+          try {
+            ch.postMessage({
+              type: 'llm:request', req: reqId,
+              prompt: prompt, opts: opts || {}
+            });
+          } catch(e){ ch.close(); return reject(e); }
+          setTimeout(function(){
+            try { ch.removeEventListener('message', handler); ch.close(); } catch(_){}
+            reject(new Error('mesh timeout'));
+          }, opts.mesh_timeout || 2000);
+        });
+      }
+    }
+  };
+  var T3 = {
+    onlybrains: {
+      tier: 'T3',
+      label: 'OnlyBrains',
+      ask: async function(prompt, opts){
+        if (r && r.error) throw new Error('onlybrains: ' + r.error);
+        // Shape: response varies by OnlyBrains API · normalise
+        if (typeof r === 'string') return r;
+        return r.text || r.answer || r.result || r.output || JSON.stringify(r);
+      }
+    }
+  };
+  // ── T4 WebLLM (in-browser, requires WebGPU) ──
+  var WEBLLM_DEFAULT_MODEL = 'Llama-3.2-3B-Instruct-q4f16_1-MLC';
+  var webllmEngine = null;
+  var webllmLoadPromise = null;
+  function hasWebGPU(){ return typeof navigator !== 'undefined' && !!navigator.gpu; }
+  async function loadWebLLM(modelId) {
+    if (webllmEngine) return webllmEngine;
+    if (webllmLoadPromise) return webllmLoadPromise;
+    if (!hasWebGPU()) throw new Error('WebGPU unavailable in this browser');
+    STATE.webllm.status = 'downloading';
+    STATE.webllm.model = modelId || WEBLLM_DEFAULT_MODEL;
+    STATE.webllm.progress = 0;
+    STATE.webllm.message = 'starting…';
+    persist();
+    updateUI();
+    webllmLoadPromise = (async function(){
+      var mod = await import('https://esm.run/@mlc-ai/web-llm');
+      var fn = mod.CreateMLCEngine || mod.createMLCEngine;
+      if (!fn) throw new Error('WebLLM API not found in module');
+      webllmEngine = await fn(STATE.webllm.model, {
+        initProgressCallback: function(p){
+          STATE.webllm.progress = p.progress || 0;
+          STATE.webllm.message = p.text || '';
+          persist();
+          updateUI();
+        }
+      });
+      STATE.webllm.status = 'ready';
+      STATE.webllm.message = 'ready';
+      persist();
+      updateUI();
+      return webllmEngine;
+    })().catch(function(e){
+      STATE.webllm.status = 'error';
+      STATE.webllm.message = e.message || String(e);
+      persist();
+      updateUI();
+      webllmLoadPromise = null;
+      throw e;
+    });
+    return webllmLoadPromise;
+  }
+  var T4 = {
+    webllm: {
+      tier: 'T4',
+      label: 'WebLLM (offline)',
+      available: function(){ return hasWebGPU(); },
+      ask: async function(prompt, opts){
+        var eng = await loadWebLLM(opts.model);
+        var r = await eng.chat.completions.create({
+          messages: [
+            { role: 'system', content: opts.system || 'You are a helpful assistant. Reply concisely.' },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: opts.max_tokens || 1024,
+          temperature: opts.temperature == null ? 0.7 : opts.temperature
+        });
+        return r.choices[0].message.content;
+      }
+    }
+  };
+  // ── T0 deterministic fallback (last resort, never throws) ──
+  var T0 = {
+    t0: {
+      tier: 'T0',
+      label: 'Offline fallback',
+      available: function(){ return true; },
+      ask: async function(prompt, opts){
+        if (opts.fallback) return typeof opts.fallback === 'function' ? opts.fallback(prompt) : opts.fallback;
+        return '[T0] No AI provider available. Add an API key (Settings → AI Cascade), enable WebLLM, or check internet connection. Prompt was: ' + String(prompt || '').slice(0, 200);
+      }
+    }
+  };
+  var ALL = Object.assign({}, T1, T2, T3, T4, T0);
+  // Listen for mesh peer requests — if other tabs ask us, answer using our T1 provider only
+  // (don't recurse into mesh asking mesh asking mesh)
+  try {
+    var peerCh = new BroadcastChannel('fallmesh');
+    peerCh.addEventListener('message', async function(e){
+      var m = e.data;
+      // Try T1 only — don't recurse
+      for (var i = 0; i < STATE.preferred.length; i++) {
+        var p = STATE.preferred[i];
+        if (p === 'mesh' || p === 't0' || !ALL[p]) continue;
+        if (ALL[p].tier !== 'T1') continue;
+        if (ALL[p].hasKey && !ALL[p].hasKey()) continue;
+        try {
+          var text = await ALL[p].ask(m.prompt, m.opts || {});
+          return;
+        } catch(_){}
+      }
+      // Couldn't help — silently ignore
+    });
+  } catch(_){}
+  // ── Main ask() — walks the cascade ──
+  async function ask(prompt, opts) {
+    opts = opts || {};
+    var order = opts.order || STATE.preferred;
+    var skipped = [];
+    for (var i = 0; i < order.length; i++) {
+      var name = order[i];
+      var p = ALL[name];
+      if (!p) continue;
+      if (p.available && !p.available()) { skipped.push({ name: name, reason: 'unavailable' }); continue; }
+      if (p.hasKey && !p.hasKey()) { skipped.push({ name: name, reason: 'no key' }); continue; }
+      var t0 = Date.now();
+      try {
+        var text = await p.ask(prompt, opts);
+        var ms = Date.now() - t0;
+        trace(name, p.tier, ms, true, prompt);
+        return { provider: name, tier: p.tier, label: p.label, text: text, ms: ms, skipped: skipped };
+      } catch(e) {
+        var ms2 = Date.now() - t0;
+        trace(name, p.tier, ms2, false, prompt);
+        skipped.push({ name: name, reason: e.message || String(e), ms: ms2 });
+      }
+    }
+    return { error: 'all providers failed', skipped: skipped };
+  }
+  function providers() {
+    return {
+      fallcore: !!STATE.fallcore_endpoint,
+      fallcore_endpoint: STATE.fallcore_endpoint,
+      anthropic: !!STATE.keys.anthropic,
+      openai: !!STATE.keys.openai,
+      google: !!STATE.keys.google,
+      webllm_supported: hasWebGPU(),
+      webllm_status: STATE.webllm.status,
+      webllm_progress: STATE.webllm.progress,
+      webllm_model: STATE.webllm.model
+    };
+  }
+  function setKey(provider, key) {
+    STATE.keys[provider] = key;
+    persist();
+    updateUI();
+  }
+  function setFallcoreEndpoint(url) {
+    STATE.fallcore_endpoint = String(url || '').trim();
+    persist();
+    updateUI();
+  }
+  function currentTier() {
+    // Highest-priority tier that will ACTUALLY answer (mesh excluded since it's peer-dependent)
+    var prov = providers();
+    if (prov.fallcore) return 'T1·FallCore';
+    if (prov.anthropic || prov.openai || prov.google) return 'T1';
+    if (prov.onlybrains) return 'T3';
+    if (prov.webllm_status === 'ready') return 'T4';
+    return 'T0';
+  }
+  // ── Floating cascade-status badge ──
+  var badge = null;
+  function injectBadge(){
+    var el = document.createElement('div');
+    el.id = 'llm-badge';
+    el.style.cssText = 'position:fixed;bottom:12px;left:340px;background:rgba(0,0,0,.65);color:#dbe1ea;padding:5px 10px;border-radius:6px;font-family:monospace;font-size:11px;cursor:pointer;z-index:9999;letter-spacing:.06em;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px';
+    el.title = 'LLM Cascade · click for status';
+    el.onclick = function(){ showCascadeUI(); };
+    document.body.appendChild(el);
+    badge = el;
+    updateUI();
+  }
+  function updateUI(){
+    if (!badge) return;
+    var tier = currentTier();
+    var colour = tier === 'T1' ? '#22c55e' : tier === 'T2' ? '#8b5cf6' : tier === 'T3' ? '#d4af37' : tier === 'T4' ? '#f59e0b' : '#8a8a8a';
+    var label = 'AI · ' + tier;
+    if (STATE.webllm.status === 'downloading') {
+      label = 'WebLLM ' + Math.round((STATE.webllm.progress || 0) * 100) + '%';
+      colour = '#f59e0b';
+    }
+    badge.innerHTML = '<span style="color:' + colour + ';font-weight:700">●</span><span>' + label + '</span>';
+  }
+  // ── Settings modal ──
+  function showCascadeUI(){
+    var prov = providers();
+    var tier = currentTier();
+    var fallcoreHtml = '<div style="background:#0c0e12;border:1px solid #2a2f3a;border-radius:6px;padding:10px;margin-bottom:10px;font-size:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong style="color:#22c55e">⚡ FallCore (on-prem brain)</strong><span style="color:#8a8a8a;font-size:11px">' + (STATE.fallcore_endpoint ? STATE.fallcore_endpoint : 'not set') + '</span></div>' +
+      '<div style="font-size:11px;color:#a8b0bc;margin-bottom:8px">Point at your company’s on-prem brain. Cascades local-first, falls through to frontier only on low confidence. Same API as Anthropic. Self-improves over time from your reviewer corrections.</div>' +
+      '<div style="display:flex;gap:6px;align-items:center">' +
+      '<input type="text" id="llm-fallcore-url" placeholder="https://ai.acme.internal or http://localhost:11434" value="' + (STATE.fallcore_endpoint || '') + '" style="flex:1;background:#0c0e12;color:#dbe1ea;border:1px solid #2a2f3a;border-radius:5px;padding:5px 8px;font-family:monospace;font-size:11px">' +
+      '<button id="llm-fallcore-save" style="background:#22c55e;color:#000;border:none;padding:5px 12px;border-radius:5px;cursor:pointer;font-size:11px;font-weight:600">save</button>' +
+      (STATE.fallcore_endpoint ? '<button id="llm-fallcore-clear" style="background:transparent;color:#ef4444;border:1px solid #ef4444;padding:5px 10px;border-radius:5px;cursor:pointer;font-size:11px">clear</button>' : '') +
+      '</div></div>';
+    var keysHtml = ['anthropic','openai','google'].map(function(p){
+      var has = !!STATE.keys[p];
+      var label = p[0].toUpperCase() + p.slice(1);
+      return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><label style="width:90px;font-size:12px;color:#a8b0bc">' + label + '</label><input type="password" id="llm-key-' + p + '" placeholder="' + (has ? '••• key saved' : 'paste API key') + '" style="flex:1;background:#0c0e12;color:#dbe1ea;border:1px solid #2a2f3a;border-radius:5px;padding:5px 8px;font-family:monospace;font-size:11px"><button data-save="' + p + '" style="background:#5b8def;color:#fff;border:none;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:11px">save</button>' + (has ? '<button data-clear="' + p + '" style="background:transparent;color:#ef4444;border:1px solid #ef4444;padding:4px 8px;border-radius:5px;cursor:pointer;font-size:11px">clear</button>' : '') + '</div>';
+    }).join('');
+    var webllmStatus = STATE.webllm.status;
+    var webllmHtml = '<div style="background:#0c0e12;border:1px solid #2a2f3a;border-radius:6px;padding:10px;margin:10px 0;font-size:12px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><strong style="color:#f59e0b">⚡ WebLLM (in-browser, offline-capable)</strong><span style="color:#8a8a8a;font-size:11px">' + (STATE.webllm.model || WEBLLM_DEFAULT_MODEL) + '</span></div>' +
+      '<div style="font-size:11px;color:#a8b0bc;margin-bottom:8px">Downloads a 1.7GB model once. After that all AI runs in your browser using WebGPU — no internet needed. Status: <strong style="color:' + (webllmStatus === 'ready' ? '#22c55e' : webllmStatus === 'downloading' ? '#f59e0b' : '#8a8a8a') + '">' + webllmStatus + '</strong>' + (STATE.webllm.message ? ' · ' + STATE.webllm.message : '') + '</div>' +
+      (webllmStatus === 'downloading' ? '<div style="height:6px;background:#1f2937;border-radius:3px;overflow:hidden;margin-bottom:6px"><div style="height:100%;background:#f59e0b;width:' + Math.round((STATE.webllm.progress || 0) * 100) + '%"></div></div>' : '') +
+      '<div style="display:flex;gap:6px"><button id="llm-webllm-download" ' + (webllmStatus === 'downloading' || webllmStatus === 'ready' ? 'disabled' : '') + ' style="background:#f59e0b;color:#000;border:none;padding:6px 12px;border-radius:5px;cursor:' + (webllmStatus === 'downloading' || webllmStatus === 'ready' ? 'not-allowed;opacity:.5' : 'pointer') + ';font-size:11px;font-weight:600">' + (webllmStatus === 'ready' ? '✓ loaded' : webllmStatus === 'downloading' ? 'downloading…' : 'download model (1.7GB)') + '</button>' +
+      (hasWebGPU() ? '<span style="font-size:10px;color:#22c55e;align-self:center">✓ WebGPU supported</span>' : '<span style="font-size:10px;color:#ef4444;align-self:center">✗ WebGPU not available in this browser</span>') +
+      '</div></div>';
+    var logHtml = STATE.log.slice(0, 6).map(function(l){
+      var d = new Date(l.t).toLocaleString();
+      var ok = l.ok ? '✓' : '✗';
+      var colour = l.ok ? '#22c55e' : '#ef4444';
+      return '<div style="font-size:10px;color:#a8b0bc;padding:2px 0"><span style="color:#8a8a8a">' + d + '</span> · <span style="color:' + colour + '">' + ok + '</span> ' + l.provider + ' (' + l.tier + ') · ' + l.ms + 'ms · ' + l.prompt_chars + ' chars in</div>';
+    }).join('') || '<div style="color:#8a8a8a;font-size:11px">no calls yet</div>';
+    var modal = document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui,sans-serif';
+    modal.innerHTML='<div style="background:#161821;border:1px solid #2a2f3a;border-radius:12px;padding:22px;max-width:580px;width:100%;color:#dbe1ea;max-height:90vh;overflow:auto">' +
+      '<p style="margin:0 0 12px;font-size:12px;color:#8a8a8a">Current tier: <strong style="color:' + (tier==='T1'?'#22c55e':tier==='T2'?'#8b5cf6':tier==='T3'?'#d4af37':tier==='T4'?'#f59e0b':'#8a8a8a') + '">' + tier + '</strong> · fallback order: ' + STATE.preferred.join(' → ') + '</p>' +
+      '<h4 style="font-size:11px;color:#8a8a8a;letter-spacing:.08em;text-transform:uppercase;margin:8px 0 6px">T1 · FallCore (your on-prem brain)</h4>' +
+      fallcoreHtml +
+      '<h4 style="font-size:11px;color:#8a8a8a;letter-spacing:.08em;text-transform:uppercase;margin:12px 0 6px">T1 · direct API keys (browser-only, never leaves device)</h4>' +
+      keysHtml +
+      '<h4 style="font-size:11px;color:#8a8a8a;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px">T4 · WebLLM offline</h4>' +
+      webllmHtml +
+      '<h4 style="font-size:11px;color:#8a8a8a;letter-spacing:.08em;text-transform:uppercase;margin:14px 0 6px">recent calls</h4>' +
+      logHtml +
+      '<div style="display:flex;gap:8px;margin-top:14px"><button id="llm-test" style="background:#5b8def;color:#fff;border:none;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px">test cascade</button><button id="llm-close" style="background:transparent;color:#8a8a8a;border:1px solid #2a2f3a;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:12px">close</button></div>' +
+      '<div id="llm-test-result" style="margin-top:10px;font-size:11px;color:#a8b0bc;font-family:monospace;display:none;background:#06080c;border:1px solid #1f2937;border-radius:4px;padding:8px;max-height:200px;overflow:auto"></div>' +
+      '</div>';
+    document.body.appendChild(modal);
+    modal.querySelector('#llm-close').onclick = function(){ modal.remove(); };
+    modal.onclick = function(e){ if (e.target === modal) modal.remove(); };
+    // FallCore endpoint save/clear
+    var fcSave = modal.querySelector('#llm-fallcore-save');
+    if (fcSave) fcSave.onclick = function(){
+      var url = modal.querySelector('#llm-fallcore-url').value.trim();
+      setFallcoreEndpoint(url);
+      modal.remove(); showCascadeUI();
+    };
+    var fcClear = modal.querySelector('#llm-fallcore-clear');
+    if (fcClear) fcClear.onclick = function(){
+      setFallcoreEndpoint('');
+      modal.remove(); showCascadeUI();
+    };
+    modal.querySelectorAll('[data-save]').forEach(function(b){
+      b.onclick = function(){
+        var p = b.getAttribute('data-save');
+        var inp = modal.querySelector('#llm-key-' + p);
+        if (inp.value) { setKey(p, inp.value); modal.remove(); showCascadeUI(); }
+      };
+    });
+    modal.querySelectorAll('[data-clear]').forEach(function(b){
+      b.onclick = function(){ var p = b.getAttribute('data-clear'); delete STATE.keys[p]; persist(); updateUI(); modal.remove(); showCascadeUI(); };
+    });
+    var dl = modal.querySelector('#llm-webllm-download');
+    if (dl) dl.onclick = function(){ loadWebLLM().then(function(){ modal.remove(); showCascadeUI(); }).catch(function(e){ alert('WebLLM load failed: ' + e.message); }); };
+    var test = modal.querySelector('#llm-test');
+    test.onclick = async function(){
+      var res = modal.querySelector('#llm-test-result');
+      res.style.display = 'block';
+      res.textContent = 'testing… asking "Say OK in one word"';
+      var r = await ask('Say OK in one word.', { max_tokens: 32 });
+      res.textContent = r.error ? '✗ ' + r.error + '\nSkipped: ' + JSON.stringify(r.skipped || [], null, 2) : '✓ ' + r.provider + ' (' + r.tier + ') · ' + r.ms + 'ms\n\n' + r.text;
+    };
+  }
+  // Boot
+  (function boot(){
+    function ready(){
+      injectBadge();
+    }
+    else ready();
+  })();
+    ask: ask,
+    providers: providers,
+    setKey: setKey,
+    setFallcoreEndpoint: setFallcoreEndpoint,
+    preloadWebLLM: loadWebLLM,
+    tier: currentTier,
+    config: { preferred: STATE.preferred },
+    showSettings: showCascadeUI,
+    _state: STATE
+  };
+})();
+(function fallApiShim(){
+  var REGISTRY = {};   // resource → handler
+  var PEERS = {};      // tool_id → { last_seen, resources, prime, name }
+  var PEER_TTL = 30000;
+  // Open dedicated channel for API traffic (separate from fallmesh events)
+  var channel = null;
+  try { channel = new BroadcastChannel('fall-api'); }
+  catch (_) { return; } // browser too old
+  function emit(msg) {
+    try { channel.postMessage(Object.assign({ from: NODE.id, prime: NODE.prime, t: Date.now() }, msg)); } catch (_){}
+  }
+  // ── Server side (this tool exposes resources) ──
+    register: function(resource, handler, meta) {
+      if (typeof resource !== 'string' || typeof handler !== 'function') return false;
+      REGISTRY[resource] = { handler: handler, meta: meta || {} };
+      // Broadcast discovery
+      emit({ type: 'fall-api:register', resource: resource, name: NODE.name, meta: meta || {} });
+      // Track in KCC (R6 govern — exposing a public surface)
+      return true;
+    },
+    unregister: function(resource) {
+      delete REGISTRY[resource];
+      emit({ type: 'fall-api:unregister', resource: resource });
+    },
+    list: function() {
+      return Object.keys(REGISTRY).map(function(r){
+        return { resource: r, meta: REGISTRY[r].meta };
+      });
+    }
+  };
+  // ── Handle incoming requests ──
+  channel.onmessage = function(e) {
+    var m = e.data;
+    if (!m || m.from === NODE.id) return;
+    // Track peer
+    if (m.type && m.from) {
+      PEERS[m.from] = PEERS[m.from] || { resources: {} };
+      PEERS[m.from].last_seen = Date.now();
+      PEERS[m.from].prime = m.prime;
+      PEERS[m.from].name = m.name || PEERS[m.from].name;
+    }
+    // Discovery broadcasts
+    if (m.type === 'fall-api:register' && m.from && m.resource) {
+      PEERS[m.from].resources[m.resource] = m.meta || {};
+      return;
+    }
+    if (m.type === 'fall-api:unregister' && m.from && m.resource) {
+      if (PEERS[m.from]) delete PEERS[m.from].resources[m.resource];
+      return;
+    }
+    if (m.type === 'fall-api:hello') {
+      // Reply with our capabilities
+      emit({
+        type: 'fall-api:announce',
+        name: NODE.name,
+        resources: Object.keys(REGISTRY).reduce(function(acc, k){ acc[k] = REGISTRY[k].meta || {}; return acc; }, {})
+      });
+      return;
+    }
+    if (m.type === 'fall-api:announce' && m.from) {
+      PEERS[m.from].resources = m.resources || {};
+      return;
+    }
+    // Request targeted at us
+    if (m.type === 'fall-api:request' && m.target === NODE.id) {
+      var entry = REGISTRY[m.resource];
+      if (!entry) {
+        emit({ type: 'fall-api:response', req: m.req, target: m.from, error: 'resource not found: ' + m.resource });
+        return;
+      }
+      try {
+        Promise.resolve(entry.handler(m.params || {}, { caller: m.from, callerPrime: m.callerPrime }))
+          .then(function(result){
+            emit({ type: 'fall-api:response', req: m.req, target: m.from, ok: true, result: result, resource: m.resource });
+          })
+          .catch(function(err){
+            emit({ type: 'fall-api:response', req: m.req, target: m.from, error: err.message || String(err) });
+          });
+      } catch (e) {
+        emit({ type: 'fall-api:response', req: m.req, target: m.from, error: e.message });
+      }
+      return;
+    }
+  };
+  // ── Client side (this tool calls another tool's API) ──
+    call: function(tool, resource, params, opts) {
+      opts = opts || {};
+      return new Promise(function(resolve, reject){
+        if (!channel) return reject(new Error('no BroadcastChannel'));
+        var req = 'fr_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+        var done = false;
+        var handler = function(e) {
+          var m = e.data;
+          if (m && m.type === 'fall-api:response' && m.req === req) {
+            done = true;
+            channel.removeEventListener('message', handler);
+            if (m.error) return reject(new Error(m.error));
+            resolve(m.result);
+          }
+        };
+        channel.addEventListener('message', handler);
+        emit({ type: 'fall-api:request', req: req, target: tool, resource: resource, params: params, callerPrime: NODE.prime });
+        setTimeout(function(){
+          if (done) return;
+          channel.removeEventListener('message', handler);
+          reject(new Error('fall.call timeout · ' + tool + '/' + resource));
+        }, opts.timeout || 4000);
+      });
+    },
+    // Fan out: ask all peers that expose <resource>
+    callMany: function(resource, params, opts) {
+      var promises = Object.keys(PEERS)
+        .filter(function(p){ return PEERS[p].resources && PEERS[p].resources[resource]; })
+        .map(function(p){
+            .then(function(r){ return { tool: p, ok: true, result: r }; })
+            .catch(function(e){ return { tool: p, ok: false, error: e.message }; });
+        });
+      return Promise.all(promises);
+    },
+    // List currently visible peers + their resources
+    discover: function() {
+      var now = Date.now();
+      var live = {};
+      Object.keys(PEERS).forEach(function(p){
+        if (now - PEERS[p].last_seen < PEER_TTL) live[p] = PEERS[p];
+      });
+      return live;
+    },
+    // Ask the network "what's out there"
+    refresh: function() {
+      emit({ type: 'fall-api:hello' });
+    }
+  };
+  // ── Boot · say hello to the network ──
+  (function boot(){
+    function ready(){
+      setTimeout(function(){
+        emit({ type: 'fall-api:hello', name: NODE.name });
+      }, 500);
+    }
+    else ready();
+  })();
+})();
+(function fallSwShim(){
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+  if (window._fall_sw_installed) return;
+  window._fall_sw_installed = true;
+  // The SW code, as a string, served via Blob URL
+  var SW_CODE = `
+// Intercepts /api/&lt;tool&gt;/&lt;resource&gt; · routes to clients
+const VERSION = '${Date.now()}';
+const TIMEOUT = 5000;
+self.addEventListener('install', function(e){
+  self.skipWaiting();
+});
+self.addEventListener('activate', function(e){
+  e.waitUntil(self.clients.claim());
+});
+self.addEventListener('fetch', function(event) {
+  var url = new URL(event.request.url);
+  // Only intercept same-origin /api/* paths
+  if (url.origin !== self.location.origin) return;
+  if (!url.pathname.startsWith('/api/')) return;
+  // Parse: /api/&lt;tool&gt;/&lt;resource&gt;
+  var parts = url.pathname.slice(5).split('/');
+  var tool = parts[0];
+  var resource = parts.slice(1).join('/');
+  if (!tool) return;
+  // Collect params from query + body
+  event.respondWith((async function(){
+    var params = {};
+    url.searchParams.forEach(function(v, k){ params[k] = v; });
+    if (event.request.method === 'POST') {
+      try {
+        var body = await event.request.json();
+        Object.assign(params, body || {});
+      } catch(_){}
+    }
+    // Ask any client tab to serve this
+    var clientList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (!clientList.length) {
+      return new Response(JSON.stringify({ error: 'no Fall* tab open · open the tool first' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    var req = 'sw_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    var channel = new MessageChannel();
+    var responsePromise = new Promise(function(resolve, reject){
+      var t = setTimeout(function(){ reject(new Error('sw timeout')); }, TIMEOUT);
+      channel.port1.onmessage = function(e){
+        clearTimeout(t);
+        if (e.data && e.data.error) reject(new Error(e.data.error));
+        else resolve(e.data && e.data.result);
+      };
+    });
+    // Broadcast to all clients; the one that owns the tool responds
+    clientList.forEach(function(c){
+      try {
+        c.postMessage({ type: 'sw:api-request', req: req, tool: tool, resource: resource, params: params }, [channel.port2]);
+      } catch(_){}
+    });
+    try {
+      var result = await responsePromise;
+      return new Response(JSON.stringify(result), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'x-fallcore-sw': VERSION, 'Access-Control-Allow-Origin': '*' }
+      });
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+  })());
+});
+`;
+  // Each page listens for SW messages and forwards via fall-api
+  navigator.serviceWorker.addEventListener('message', function(e) {
+    var m = e.data;
+    if (!m || m.type !== 'sw:api-request') return;
+    var port = e.ports && e.ports[0];
+    if (!port) return;
+    // Only respond if WE own this tool
+    if (m.tool !== NODE.id) {
+      // Forward through fall-api BroadcastChannel to whichever tab DOES own it
+        port.postMessage({ error: 'no fall-api shim loaded' });
+        return;
+      }
+        .then(function(r){ port.postMessage({ result: r }); })
+        .catch(function(e){ port.postMessage({ error: e.message }); });
+      return;
+    }
+    // We own it: invoke directly
+      port.postMessage({ error: 'no fall_api registry' });
+      return;
+    }
+    // Pretend we're another tab and use fall.call to ourselves (cleanest path through the registry)
+        .then(function(r){ port.postMessage({ result: r }); })
+        .catch(function(e){ port.postMessage({ error: e.message }); });
+    } else {
+      port.postMessage({ error: 'fall registry unavailable' });
+    }
+  });
+  // Register the SW from inline Blob (scope: this page's directory; for tools at root, this is the whole origin)
+  function registerSw() {
+    try {
+      var blob = new Blob([SW_CODE], { type: 'application/javascript' });
+      var swUrl = URL.createObjectURL(blob);
+      // Note: SW scope is restricted to its URL path. Inline SWs scope only to the page that registered them.
+      // For full /api/* origin scope, the SW needs to be served from the origin root with proper Service-Worker-Allowed header.
+      // This v1 ships scope-limited; v2 will deploy a real /sw.js to each Pages root.
+      navigator.serviceWorker.register(swUrl, { scope: './' })
+        .then(function(reg){
+        })
+        .catch(function(e){
+        });
+    } catch (e) {
+    }
+  }
+  else registerSw();
+})();
+
+// Named exports for the primary API surface
+export { meshPost };
+export { decompose };
+export { isBalanced };
+export { isSpiked };
+export { dominantRing };
+export { needsSearch };
+export { signature };
+export { pickMCP };
+export { b64Bytes };
+export { canonJSON };
+
+export { VERSION };
+export { TIMEOUT };
